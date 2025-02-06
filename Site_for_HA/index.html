@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Control Releu</title>
+  <script>
+    const accessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJjYWQ5YTVlZmEyODU0OTliYTU1M2EwMjUxMzFlOTllYSIsImlhdCI6MTczODg2Mjk3MiwiZXhwIjoyMDU0MjIyOTcyfQ.G2Whltd_pFskRPEfUASZOXlMxJrI39x0dDaVCQiPaPk'; // Înlocuiți cu token-ul dvs. de acces pe termen lung
+    const baseUrl = 'http://soric-house.local:8123/api'; // Înlocuiți cu URL-ul dvs. de Home Assistant
+
+    function trimiteComanda(comanda) {
+      fetch(`${baseUrl}/services/switch/turn_${comanda}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ entity_id: 'switch.your_relay_entity_id' }) // Înlocuiți cu ID-ul entității releului dvs.
+      })
+      .then(response => response.json())
+      .then(data => {
+        obtineStareReleu();
+      });
+    }
+
+    function obtineStareReleu() {
+      fetch(`${baseUrl}/states/switch.your_relay_entity_id`, { // Înlocuiți cu ID-ul entității releului dvs.
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('stareReleu').innerText = data.state;
+      });
+    }
+
+    window.onload = obtineStareReleu; // Obține starea releului la încărcarea paginii
+  </script>
+</head>
+<body>
+  <h1>Control Releu</h1>
+  <button onclick="trimiteComanda('on')">Pornire</button>
+  <button onclick="trimiteComanda('off')">Oprire</button>
+  <p>Stare releu: <span id="stareReleu">Necunoscută</span></p>
+</body>
+</html>
