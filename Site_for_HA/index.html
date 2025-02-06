@@ -16,7 +16,7 @@
     const statusDiv = document.getElementById("status");
 
     // Conectare la brokerul MQTT
-    const client = mqtt.connect("Adresa_serverului_MQTT");
+    const client = mqtt.connect("mqtt://mqtt.eclipseprojects.io:1833");
 
     client.on("connect", function () {
       console.log("Conectat la MQTT");
