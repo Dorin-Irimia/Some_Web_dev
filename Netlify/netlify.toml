@@ -1,0 +1,8 @@
+[build]
+  functions = "netlify/functions" # Directorul cu funcțiile Netlify
+  publish = "public" # Directorul cu fișierele statice (HTML, CSS, JS) - creează acest director și mută acolo index.html
+
+[[redirects]] # Redirecționare pentru a servi index.html din directorul public
+  from = "/*"
+  to = "/index.html"
+  status = 200
