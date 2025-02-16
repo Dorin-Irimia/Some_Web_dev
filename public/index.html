@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ESP32 Controls</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Relay Control</h1>
+  <button onclick="sendCommand('aprinde')">Turn On Relay</button>
+  <button onclick="sendCommand('stinge')">Turn Off Relay</button>
+  <div class = "SetClock">
+    <h5> Ora Incepere</h5>
+    <select id="startOraSelectata"> </select>
+    <select id="startMinutulSelectat"> </select>
+    <h5> Ora Finala</h5>
+    <select id="stopOraSelectata"> </select>
+    <select id="stopMinutulSelectat"> </select>
+    <button onclick="sendClockStorage()">Stocheaza ora</button>
+  </div>
+ 
+  <button id="workModeButton" onclick="toggleWork()">WORKmode</button>
+  <div id="date-esp32"></div>
+  <div id="data-workMode"></div>
+  <div id="data-afisare-ore-stocate"></div>
+
+  <script>
+    
+        // SETARI PENTRU BUTONUL DE WORKMODE  
+    
+        let currentWorkMode = null; // Store the current work mode received from ESP32
+        const workModeButton = document.getElementById('workModeButton');
+
+        function toggleWork() {
+            const command = currentWorkMode === 'AUTO' ? 'MANUAL' : 'AUTO'; // Toggle the command
+            document.cookie = `workMode=${command}; expires=Fri, 31 Dec 9999 23:59:59 GMT`;
+            sendWorkMode(command);  // Send the command first
+            workModeButton.disabled = true; // Disable the button while waiting for response
+            workModeButton.classList.add('sending'); // Indicate sending
+        }
+
+        function sendWorkMode(command) {
+            fetch('/sendWorkMode', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'command=' + command,
+            })
+            .then(response => response.text())
+            .then(data => {
+                console.log("ESP32 Response:", data);
+                workModeButton.classList.remove('sending'); // Remove sending indicator
+                workModeButton.disabled = false; // Re-enable the button
+
+                if (data.includes("WorkMode is now AUTO")) {
+                    currentWorkMode = 'AUTO';
+                    workModeButton.textContent = 'AUTOMAT';
+                    workModeButton.classList.remove('MANUAL','error');
+                    workModeButton.classList.add('AUTO');
+                } else if (data.includes("WorkMode is now MANUAL")) {
+                    currentWorkMode = 'MANUAL';
+                    workModeButton.textContent = 'MANUAL';
+                     workModeButton.classList.remove('AUTO','error');
+                    workModeButton.classList.add('MANUAL');
+                } else {
+                    workModeButton.classList.add('error');
+                }
+            })
+            .catch(error => {
+                console.error("Error sending command:", error);
+                workModeButton.classList.remove('sending'); // Remove sending indicator
+                workModeButton.classList.add('error');
+                workModeButton.disabled = false; // Re-enable the button
+            });
+        }
+    
+        window.addEventListener('DOMContentLoaded', () => {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.startsWith('workMode=')) {
+            const storedMode = cookie.substring('workMode='.length);
+            currentWorkMode = storedMode;
+            workModeButton.textContent = currentWorkMode === 'AUTO' ? 'WorkMode Turn Manual' : 'WorkMode Turn Auto';
+            workModeButton.classList.remove('AUTO', 'MANUAL', 'error');
+            workModeButton.classList.add(currentWorkMode);
+            break;
+          }
+      }
+      if (currentWorkMode == null) { // If the cookie is not present the default state is MANUAL
+                currentWorkMode = "MANUAL";
+                workModeButton.textContent = "MANUAL";
+                workModeButton.classList.add("MANUAL");
+            }
+});
+    
+        // SFARSITUL SETARILOR PENTRU BUTONUL WORKMODE
+    
+        // TRIMITEREA DATELOR DE LA BUTONUL DE CONTROL AL RELEULUI SI CITIREA DE LA ESP32
+    
+    function sendCommand(command) {
+      fetch('/sendCommand', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'command=' + command,
+      })
+      .then(response => response.text())
+      .then(data => console.log(data));
+    }
+    
+    function updateData() {
+      fetch('/data')
+        .then(response => response.text())
+        .then(data => {
+          document.getElementById('date-esp32').innerText = 'ESP32 Data: ' + data;
+        });
+    }
+    
+    function updateDataWorkMode() {
+      fetch('/date')
+        .then(response => response.text())
+        .then(data => {
+          document.getElementById('data-workMode').innerText = 'Modul de lucru actual este: ' + data;
+        });
+    }
+    
+    let clockStorageUpdated = false;
+    
+    function updateClockStored() {
+    
+      fetch('/dateClock')
+        .then(response => response.text())
+        .then(data => {
+            document.getElementById('data-afisare-ore-stocate').innerText = 'Orele de lucru sunt: ' + data;
+  // 1. Separarea orelor (presupunând că sunt separate prin spațiu și cratimă, ex: "08:00 - 17:00")
+          if (!clockStorageUpdated) {
+          const parts = data.split(" - "); // Împarte string-ul în două: "08:00" și "17:00"
+
+            if (parts.length === 2) { // Verifică dacă avem două părți (start și stop)
+                const startTime = parts[0];
+                const stopTime = parts[1];
+
+                // 2. Separarea orelor și a minutelor
+                const startParts = startTime.split(":");
+                const stopParts = stopTime.split(":");
+
+                if (startParts.length === 2 && stopParts.length === 2) { // Verifică dacă avem ore și minute
+                    const startHour = startParts[0];
+                    const startMinute = startParts[1];
+                    const stopHour = stopParts[0];
+                    const stopMinute = stopParts[1];
+
+                    // 3. Actualizarea câmpurilor select
+                    _startOraSelectata.value = startHour;
+                    _startMinutulSelectat.value = startMinute;
+                    _stopOraSelectata.value = stopHour;
+                    _stopMinutulSelectat.value = stopMinute;
+
+                    actualizeazaOreleStop(); // Actualizează opțiunile pentru ora de stop
+                    actualizeazaMinutulStop(); // Actualizează opțiunile pentru minutul de stop
+
+                } else {
+                    console.error("Format orar invalid:", data);
+                }
+            } else {
+                console.error("Format date invalid:", data);
+            }
+            clockStorageUpdated = true;
+          }
+        })
+        .catch(error => console.error("Eroare la cerere:", error));
+    }
+    
+    setInterval(updateData, 2000);
+    setInterval(updateDataWorkMode, 2000);
+    setInterval(updateClockStored, 2000);
+    
+
+    
+      // SFARSITUL SETARILOR DE TRIMITERE SI PRIMIRE DE DATE DE LA ESP32
+    
+    //     COD PENTRU FORMATUL ORELOR
+    
+  const _startOraSelectata = document.getElementById('startOraSelectata');
+  const _startMinutulSelectat = document.getElementById('startMinutulSelectat');
+  const _stopOraSelectata = document.getElementById('stopOraSelectata');
+  const _stopMinutulSelectat = document.getElementById('stopMinutulSelectat');     
+
+      for (let i = 0; i < 24; i++) {
+          const optiuneStart = document.createElement('option');
+          optiuneStart.value = i.toString().padStart(2, '0');
+          optiuneStart.text = i.toString().padStart(2, '0');
+          _startOraSelectata.appendChild(optiuneStart);
+
+          const optiuneStop = document.createElement('option');
+          optiuneStop.value = i.toString().padStart(2, '0');
+          optiuneStop.text = i.toString().padStart(2, '0');
+          _stopOraSelectata.appendChild(optiuneStop);
+      }
+
+      for (let i = 0; i < 60; i++) {
+          const optiune = document.createElement('option');
+          optiune.value = i.toString().padStart(2, '0');
+          optiune.text = i.toString().padStart(2, '0');
+          _startMinutulSelectat.appendChild(optiune);
+
+          const optiune2 = document.createElement('option');
+          optiune2.value = i.toString().padStart(2, '0');
+          optiune2.text = i.toString().padStart(2, '0');
+          _stopMinutulSelectat.appendChild(optiune2);
+      }
+    
+function actualizeazaOreleStop() {
+      const startOra = parseInt(_startOraSelectata.value);
+      // const startMinut = parseInt(_startMinutulSelectat.value);
+    
+    // Șterge toate opțiunile curente din lista derulantă pentru ora de stop
+    // _stopOraSelectata.innerHTML = '';
+
+    // Adaugă opțiuni pentru ora de stop, începând cu ora de start
+    for (let i = startOra; i < 24; i++) {
+        const optiune = document.createElement('option');
+        optiune.value = i.toString().padStart(2, '0');
+        optiune.text = i.toString().padStart(2, '0');
+        _stopOraSelectata.appendChild(optiune);
+    }
+    
+      if(startOra == parseInt(_stopOraSelectata.value)){
+        _stopMinutulSelectat.value = _startMinutulSelectat.value;
+      }
+      actualizeazaMinutulStop();
+
+  
+}
+    _startOraSelectata.addEventListener('change', actualizeazaOreleStop);
+    _stopOraSelectata.addEventListener('change', actualizeazaMinutulStop);
+    _startMinutulSelectat.addEventListener('change', actualizeazaMinutulStop);
+
+    actualizeazaOreleStop(); // Initial update
+
+
+// Funcție pentru a actualiza opțiunile din lista derulantă pentru minutul de stop
+function actualizeazaMinutulStop() {
+            const startOra = parseInt(_startOraSelectata.value);
+            const stopOra = parseInt(_stopOraSelectata.value);
+            const startMinut = parseInt(_startMinutulSelectat.value);
+
+            _stopMinutulSelectat.innerHTML = '';
+
+            if (startOra === stopOra) {
+                for (let i = startMinut; i < 60; i++) {
+                    const optiune = document.createElement('option');
+                    optiune.value = i.toString().padStart(2, '0');
+                    optiune.text = i.toString().padStart(2, '0');
+                    _stopMinutulSelectat.appendChild(optiune);
+                }
+            } else {
+                for (let i = 0; i < 60; i++) {
+                    const optiune = document.createElement('option');
+                    optiune.value = i.toString().padStart(2, '0');
+                    optiune.text = i.toString().padStart(2, '0');
+                    _stopMinutulSelectat.appendChild(optiune);
+                }
+            }
+        }
+
+
+    
+    // SFARSITUL CODULUI PENTRU FORMATUL ORELOR
+    
+    
+     function sendClockStorage() {
+             clockStorageUpdated = false;
+            const startOra = _startOraSelectata.value;
+            const startMinut = _startMinutulSelectat.value;
+            const startTime = `${startOra}:${startMinut}`;
+             
+            const stopOra = _stopOraSelectata.value;
+            const stopMinut = _stopMinutulSelectat.value;
+            const stopTime = `${stopOra}:${stopMinut}`;
+            
+            
+            fetch('/sendClockStorageStart', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'command=' + startTime,
+            })
+            .then(response => response.text())
+            .then(data => console.log(data))
+            .catch(error => console.error("Error sending clock storage:", error));
+       
+            fetch('/sendClockStorageStop', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'command=' + stopTime,
+            })
+            .then(response => response.text())
+            .then(data => console.log(data))
+            .catch(error => console.error("Error sending clock storage:", error));
+        }
+    
+//         function getClockStorage() {
+//             fetch('/getClockStorage')
+//                 .then(response => response.json())
+//                 .then(data => {
+//                     if (data && data.startTime && data.stopTime) {
+//                         const [startHour, startMinute] = data.startTime.split(':');
+//                         const [stopHour, stopMinute] = data.stopTime.split(':');
+
+//                         _startOraSelectata.value = startHour;
+//                         _startMinutulSelectat.value = startMinute;
+//                         _stopOraSelectata.value = stopHour;
+//                         _stopMinutulSelectat.value = stopMinute;
+
+//                         actualizeazaOreleStop();
+//                         actualizeazaMinutulStop();
+
+//                         console.log("Clock storage received and updated:", data);
+//                     } else {
+//                         console.log("No clock storage data received or invalid format:", data);
+//                     }
+//                 })
+//                 .catch(error => console.error("Error getting clock storage:", error));
+//         }
+    
+  </script>
+</body>
+</html>
