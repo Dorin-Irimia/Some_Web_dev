@@ -1,0 +1,75 @@
+body {
+    font-family: sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+    color: #333;
+}
+
+h1 {
+    text-align: center;
+    margin-top: 20px;
+}
+
+button {
+    padding: 10px 20px;
+    margin: 10px;
+    border: none;
+    border-radius: 5px;
+    background-color: #007bff; /* Culoare inițială */
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+.SetClock {
+   padding: 10px 20px;
+}
+
+/* Stiluri pentru butonul WorkMode */
+#workModeButton.AUTO {
+    background-color: green; /* Verde pentru modul automat */
+}
+
+#workModeButton.MANUAL {
+    background-color: orange; /* Portocaliu pentru modul manual */
+}
+
+#workModeButton.sending { /* Stil pentru starea "se trimite" */
+    background-color: grey;
+}
+
+#workModeButton.error { /* Stil pentru starea de eroare */
+    background-color: red;
+}
+
+
+#date-esp32, #data-workMode, #data-afisare-ore-stocate {
+    margin-top: 20px;
+    text-align: center;
+    font-size: 1.2em;
+    padding: 10px; /* Adăugăm padding pentru un aspect mai plăcut */
+    border: 1px solid #ddd; /* Adăugăm un chenar subtil */
+    background-color: white; /* Fundal alb pentru lizibilitate */
+    border-radius: 5px; /* Colțuri rotunjite */
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.1); /* Umbră subtilă */
+}
+
+/* Stiluri pentru ceas (utilizând un element <input type="time">) */
+#oraStart {
+    margin-top: 10px;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+/* Alternativă pentru ceas, folosind un selector de timp extern (dacă preferi) */
+/*
+.clockpicker {
+    ... stilurile necesare pentru librăria clockpicker
+}
+*/
